@@ -135,8 +135,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onNavigate })
             {/* Hero Content */}
             <div className="relative z-10 h-full flex flex-col justify-center items-center text-center px-4 pt-4 sm:pt-8 pb-44">
                 <h1 className="text-5xl sm:text-7xl md:text-[5.5rem] font-medium text-white mb-8 tracking-tight drop-shadow-xl leading-[1.1]">
-                    Find Your <br/>
-                    <span className="text-[#ffd166] font-semibold">Perfect Space</span>
+                    FInd your calm <br/>
+                    <span className="text-[#ffd166] font-semibold">in the forest</span>
                 </h1>
                 
                 <p className="text-white/90 text-lg sm:text-xl max-w-xl font-light drop-shadow-md leading-relaxed mb-10">
