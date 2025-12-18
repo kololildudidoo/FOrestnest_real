@@ -12,21 +12,28 @@ interface DateTimeSelectionProps {
 }
 
 const DateTimeSelection: React.FC<DateTimeSelectionProps> = ({ selectedStart, selectedEnd, onWeekSelect, onContinue }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [days, setDays] = useState<DayInfo[]>([]);
+  const [currentDate, setCurrentDate] = useState(() => new Date());
+  const [days, setDays] = useState<DayInfo[]>(() =>
+    getMonthDays(new Date().getFullYear(), new Date().getMonth())
+  );
   const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
   const [blockedRanges, setBlockedRanges] = useState<{start: Date, end: Date}[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch blocked dates on mount
   useEffect(() => {
+    let isMounted = true;
     const loadBookings = async () => {
         setIsLoading(true);
         const ranges = await fetchBlockedRanges();
+        if (!isMounted) return;
         setBlockedRanges(ranges);
         setIsLoading(false);
     };
     loadBookings();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
