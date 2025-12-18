@@ -4,6 +4,8 @@ import { formatDateRange, getDaysDifference } from '../utils/dateUtils';
 import { UserDetails } from '../types';
 import { createBooking } from '../services/bookingService';
 
+const SUBMIT_TIMEOUT_MS = 8000;
+
 interface UserDetailsFormProps {
   startDate: Date;
   endDate: Date;

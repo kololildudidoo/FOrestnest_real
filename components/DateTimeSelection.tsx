@@ -18,13 +18,19 @@ const DateTimeSelection: React.FC<DateTimeSelectionProps> = ({ selectedStart, se
   const [blockedRanges, setBlockedRanges] = useState<{start: Date, end: Date}[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch blocked dates on mount
+  // Fetch blocked dates on mount (cache-first for fast UI, then refresh in background)
   useEffect(() => {
     const loadBookings = async () => {
-        setIsLoading(true);
-        const ranges = await fetchBlockedRanges();
-        setBlockedRanges(ranges);
-        setIsLoading(false);
+	        setIsLoading(true);
+	        const cachedRanges = await fetchBlockedRanges({ cache: 'cache-first' });
+	        setBlockedRanges(cachedRanges);
+	        setIsLoading(false);
+
+	        fetchBlockedRanges({ cache: 'network-first' })
+	          .then(setBlockedRanges)
+	          .catch(() => {
+	            // ignore, calendar stays usable with cached ranges
+	          });
     };
     loadBookings();
   }, []);

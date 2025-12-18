@@ -5,6 +5,8 @@ import { createBooking } from '../services/bookingService';
 import { formatDateRange, getDaysDifference } from '../utils/dateUtils';
 import { calculateTotal, PRICING } from '../utils/pricing';
 
+const SUBMIT_TIMEOUT_MS = 8000;
+
 interface ContactFormProps {
   startDate: Date;
   endDate: Date;

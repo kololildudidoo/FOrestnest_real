@@ -16,6 +16,8 @@ View your app in AI Studio: https://ai.studio/apps/drive/1aQHUQ6kEeyjFYNIVHZ1ADt
 1. Install dependencies:
    `npm install`
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. (Optional) Set `AIRBNB_ICAL_URL` in `.env.local` to your Airbnb calendar “Export calendar” URL to block unavailable dates.
+4. For bookings to persist in Firebase, set the Firebase web config in `.env.local` (use `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`, etc.).
 3. Run the app:
    `npm run dev`
 

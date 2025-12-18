@@ -1,0 +1,8 @@
+[build]
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/airbnb-ical"
+  to = "/.netlify/functions/airbnb-ical"
+  status = 200
+

@@ -79,15 +79,59 @@ const galleryImagesPlugin = (): Plugin => {
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
+    const firebaseConfig = {
+      apiKey: env.FIREBASE_API_KEY ?? env.VITE_FIREBASE_API_KEY ?? '',
+      authDomain: env.FIREBASE_AUTH_DOMAIN ?? env.VITE_FIREBASE_AUTH_DOMAIN ?? '',
+      projectId: env.FIREBASE_PROJECT_ID ?? env.VITE_FIREBASE_PROJECT_ID ?? '',
+      storageBucket: env.FIREBASE_STORAGE_BUCKET ?? env.VITE_FIREBASE_STORAGE_BUCKET ?? '',
+      messagingSenderId: env.FIREBASE_MESSAGING_SENDER_ID ?? env.VITE_FIREBASE_MESSAGING_SENDER_ID ?? '',
+      appId: env.FIREBASE_APP_ID ?? env.VITE_FIREBASE_APP_ID ?? '',
+      measurementId: env.FIREBASE_MEASUREMENT_ID ?? env.VITE_FIREBASE_MEASUREMENT_ID ?? '',
+    };
+
+    const airbnbIcalSourceUrl = env.AIRBNB_ICAL_URL ?? env.VITE_AIRBNB_ICAL_URL ?? '';
+    const airbnbIcalClientUrl = airbnbIcalSourceUrl ? '/api/airbnb-ical' : '';
+
+    let airbnbIcalProxy:
+      | Record<
+          string,
+          {
+            target: string;
+            changeOrigin: boolean;
+            secure: boolean;
+            rewrite: (path: string) => string;
+          }
+        >
+      | undefined;
+
+    if (airbnbIcalSourceUrl) {
+      try {
+        const parsed = new URL(airbnbIcalSourceUrl);
+        airbnbIcalProxy = {
+          '/api/airbnb-ical': {
+            target: parsed.origin,
+            changeOrigin: true,
+            secure: true,
+            rewrite: () => `${parsed.pathname}${parsed.search}`,
+          },
+        };
+      } catch {
+        // Ignore invalid URL; the client will just skip iCal blocks.
+      }
+    }
+
     return {
       server: {
         port: 3000,
         host: '0.0.0.0',
+        proxy: airbnbIcalProxy,
       },
       plugins: [react(), galleryImagesPlugin()],
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        __FIREBASE_CONFIG__: JSON.stringify(firebaseConfig),
+        __AIRBNB_ICAL_URL__: JSON.stringify(airbnbIcalClientUrl),
       },
       resolve: {
         alias: {
