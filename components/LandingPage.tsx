@@ -282,7 +282,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onNavigate })
                              <Home size={28} />
                          </div>
                          <div>
-                             <h3 className="font-bold text-xl text-gray-900 mb-2">Sleeps 4–8 Guests</h3>
+                             <h3 className="font-bold text-xl text-gray-900 mb-2">Sleeps up to 8 Guests</h3>
                              <p className="text-gray-500 leading-relaxed">Two bedrooms plus a sofa bed downstairs and another in the upstairs lounge keep everyone comfortable.</p>
                          </div>
                      </div>

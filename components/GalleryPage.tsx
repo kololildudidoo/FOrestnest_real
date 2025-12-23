@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { galleryImages as localGalleryImages } from 'virtual:gallery-images';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import Navbar from './Navbar';
@@ -151,6 +152,98 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate, onStartBooking })
     };
   }, [activeIndex, images.length]);
 
+  const lightbox =
+    activeIndex !== null && typeof document !== 'undefined'
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 animate-fade-in"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Image viewer"
+            onClick={closeLightbox}
+          >
+            <div
+              className="relative w-[92vw] sm:w-[90vw] max-w-6xl h-[92vh] sm:h-[90vh] max-h-[56rem]"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={closeLightbox}
+                className="absolute top-3 right-3 sm:top-4 sm:right-4 bg-white/95 hover:bg-white text-gray-900 w-11 h-11 rounded-full shadow-xl flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#ffd166]/40"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="bg-white rounded-3xl overflow-hidden shadow-2xl grid grid-rows-[minmax(0,1fr)_auto] h-full">
+                <div className="relative bg-black flex items-center justify-center">
+                  <img
+                    src={images[activeIndex].src}
+                    alt={captions[activeIndex].title}
+                    className="w-full h-full object-contain"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={showPrevious}
+                    className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-900 w-11 h-11 rounded-full shadow-xl items-center justify-center transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#ffd166]/40"
+                    aria-label="Previous image"
+                  >
+                    <ChevronLeft size={22} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={showNext}
+                    className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-900 w-11 h-11 rounded-full shadow-xl items-center justify-center transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#ffd166]/40"
+                    aria-label="Next image"
+                  >
+                    <ChevronRight size={22} />
+                  </button>
+                </div>
+
+                <div className="p-5 sm:p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="text-lg sm:text-xl font-semibold text-gray-900">
+                        {captions[activeIndex].title}
+                      </div>
+                      {captions[activeIndex].subtitle ? (
+                        <div className="text-gray-500 mt-1">{captions[activeIndex].subtitle}</div>
+                      ) : null}
+                    </div>
+
+                    <div className="sm:hidden flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={showPrevious}
+                        className="bg-gray-100 hover:bg-gray-200 text-gray-900 w-10 h-10 rounded-full flex items-center justify-center transition-colors"
+                        aria-label="Previous image"
+                      >
+                        <ChevronLeft size={20} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={showNext}
+                        className="bg-gray-100 hover:bg-gray-200 text-gray-900 w-10 h-10 rounded-full flex items-center justify-center transition-colors"
+                        aria-label="Next image"
+                      >
+                        <ChevronRight size={20} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-gray-400 mt-4">
+                    {activeIndex + 1} / {images.length} • Press Esc to close, ←/→ to navigate
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
+
   return (
     <div className="min-h-screen bg-white animate-fade-in">
        <Navbar onNavigate={onNavigate} onStartBooking={onStartBooking} variant="solid" />
@@ -185,93 +278,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate, onStartBooking })
         </div>
       </div>
 
-      {activeIndex !== null ? (
-        <div
-          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Image viewer"
-          onClick={closeLightbox}
-        >
-          <div
-            className="relative w-full max-w-6xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <button
-              type="button"
-              onClick={closeLightbox}
-              className="absolute -top-2 -right-2 sm:top-2 sm:right-2 bg-white/95 hover:bg-white text-gray-900 w-11 h-11 rounded-full shadow-xl flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#ffd166]/40"
-              aria-label="Close"
-            >
-              <X size={20} />
-            </button>
-
-            <button
-              type="button"
-              onClick={showPrevious}
-              className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-900 w-11 h-11 rounded-full shadow-xl items-center justify-center transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#ffd166]/40"
-              aria-label="Previous image"
-            >
-              <ChevronLeft size={22} />
-            </button>
-
-            <button
-              type="button"
-              onClick={showNext}
-              className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-gray-900 w-11 h-11 rounded-full shadow-xl items-center justify-center transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-[#ffd166]/40"
-              aria-label="Next image"
-            >
-              <ChevronRight size={22} />
-            </button>
-
-            <div className="bg-white rounded-3xl overflow-hidden shadow-2xl">
-              <div className="bg-black flex items-center justify-center">
-                <img
-                  src={images[activeIndex].src}
-                  alt={captions[activeIndex].title}
-                  className="max-h-[78vh] w-auto max-w-full object-contain"
-                />
-              </div>
-
-              <div className="p-5 sm:p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="text-lg sm:text-xl font-semibold text-gray-900">
-                      {captions[activeIndex].title}
-                    </div>
-                    {captions[activeIndex].subtitle ? (
-                      <div className="text-gray-500 mt-1">{captions[activeIndex].subtitle}</div>
-                    ) : null}
-                  </div>
-
-                  <div className="sm:hidden flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={showPrevious}
-                      className="bg-gray-100 hover:bg-gray-200 text-gray-900 w-10 h-10 rounded-full flex items-center justify-center transition-colors"
-                      aria-label="Previous image"
-                    >
-                      <ChevronLeft size={20} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={showNext}
-                      className="bg-gray-100 hover:bg-gray-200 text-gray-900 w-10 h-10 rounded-full flex items-center justify-center transition-colors"
-                      aria-label="Next image"
-                    >
-                      <ChevronRight size={20} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="text-xs text-gray-400 mt-4">
-                  {activeIndex + 1} / {images.length} • Press Esc to close, ←/→ to navigate
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {lightbox}
     </div>
   );
 };

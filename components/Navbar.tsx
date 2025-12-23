@@ -51,7 +51,7 @@ const Navbar: React.FC<NavbarProps> = ({ onNavigate, onStartBooking, variant = '
 
 	        {/* Desktop Nav */}
 	        <nav className={`hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 items-center gap-1 font-normal text-sm drop-shadow-sm backdrop-blur-md px-2 py-1.5 rounded-full ${navBgClass}`}>
-	            <button onClick={() => handleNav('contact')} className={`px-5 py-2.5 rounded-full transition-all ${navHoverClass}`}>Location</button>
+	            <button onClick={() => handleNav('contact')} className={`px-5 py-2.5 rounded-full transition-all ${navHoverClass}`}>Contact</button>
 	            <button onClick={() => handleNav('gallery')} className={`px-5 py-2.5 rounded-full transition-all ${navHoverClass}`}>The Cabin</button>
 	            <button onClick={() => handleNav('experiences')} className={`px-5 py-2.5 rounded-full transition-all ${navHoverClass}`}>Experiences</button>
 	            <button onClick={() => handleNav('terms')} className={`px-5 py-2.5 rounded-full transition-all ${navHoverClass}`}>Terms</button>
