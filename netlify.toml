@@ -6,3 +6,7 @@
   to = "/.netlify/functions/airbnb-ical"
   status = 200
 
+[[redirects]]
+  from = "/api/send-booking-email"
+  to = "/.netlify/functions/send-booking-email"
+  status = 200

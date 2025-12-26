@@ -179,12 +179,12 @@ const BookingLayout: React.FC<BookingLayoutProps> = ({ children, state, onEditDa
                       <p className="font-bold text-gray-900 text-lg mb-3">Lisäpalvelut</p>
                       <div className="grid gap-2">
                           <div className="flex justify-between items-center p-2.5 bg-gray-50 rounded-lg border border-gray-100 text-sm">
-                              <span className="text-gray-700 flex items-center gap-2"><Flame size={14} /> Polttopuut (2 saunavuoroa)</span>
+                              <span className="text-gray-700 flex items-center gap-2"><Flame size={14} /> Lisäpolttopuut (2 saunavuoroa)</span>
                               <span className="font-semibold text-gray-900">10 €</span>
                           </div>
                           <div className="flex justify-between items-center p-2.5 bg-gray-50 rounded-lg border border-gray-100 text-sm">
                               <span className="text-gray-700 flex items-center gap-2"><Clock size={14} /> Aikainen sisään / myöhäinen ulos (+2h)</span>
-                              <span className="font-semibold text-gray-900">40 €</span>
+                              <span className="font-semibold text-gray-900">20 €</span>
                           </div>
                           <div className="flex justify-between items-center p-2.5 bg-gray-50 rounded-lg border border-gray-100 text-sm">
                               <span className="text-gray-700 flex items-center gap-2"><PawPrint size={14} /> Lemmikkimaksu</span>

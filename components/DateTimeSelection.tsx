@@ -9,9 +9,16 @@ interface DateTimeSelectionProps {
   selectedEnd: Date | null;
   onWeekSelect: (start: Date, end: Date | null) => void;
   onContinue: () => void;
+  variant?: 'full' | 'popover';
 }
 
-const DateTimeSelection: React.FC<DateTimeSelectionProps> = ({ selectedStart, selectedEnd, onWeekSelect, onContinue }) => {
+const DateTimeSelection: React.FC<DateTimeSelectionProps> = ({
+  selectedStart,
+  selectedEnd,
+  onWeekSelect,
+  onContinue,
+  variant = 'full',
+}) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [days, setDays] = useState<DayInfo[]>([]);
   const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
@@ -142,16 +149,17 @@ const DateTimeSelection: React.FC<DateTimeSelectionProps> = ({ selectedStart, se
         : "Valitse ajankohta";
 
   return (
-    <div className="h-full flex flex-col animate-fade-in p-6 md:p-8">
-      
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
-        <div>
-           <h2 className="text-xl font-bold text-gray-900">Valitse varauksen kesto</h2>
-           <p className="text-gray-500 text-sm">Valitse aloitus- ja lopetuspäivä.</p>
-        </div>
+    <div className={`h-full flex flex-col ${variant === 'full' ? 'animate-fade-in p-6 md:p-8' : 'p-4 sm:p-6'}`}>
+      <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${variant === 'full' ? 'mb-6' : 'mb-4'}`}>
+        {variant === 'full' && (
+          <div>
+             <h2 className="text-xl font-bold text-gray-900">Valitse varauksen kesto</h2>
+             <p className="text-gray-500 text-sm">Valitse aloitus- ja lopetuspäivä.</p>
+          </div>
+        )}
         
         {/* Month Navigation */}
-        <div className="flex items-center bg-white rounded-lg p-1 border border-gray-100 shadow-sm w-full sm:w-auto justify-between sm:justify-start">
+        <div className={`flex items-center bg-white rounded-lg p-1 border border-gray-100 shadow-sm w-full ${variant === 'full' ? 'sm:w-auto justify-between sm:justify-start' : 'justify-between'}`}>
             <button onClick={handlePrevMonth} className="p-2 hover:bg-gray-50 rounded-md transition-all text-gray-600">
               <ChevronLeft size={18} />
             </button>
@@ -251,44 +259,64 @@ const DateTimeSelection: React.FC<DateTimeSelectionProps> = ({ selectedStart, se
             </div>
 
             {/* Action Panel */}
-            <div className="w-full flex flex-col animate-slide-in-right">
-                <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-6 shadow-sm">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div className="flex flex-col">
-                            <h3 className="text-xs sm:text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">Valittu aika</h3>
-                            {selectedStart ? (
-                                <div>
-                                    <div className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
-                                        {selectedRangeText}
-                                    </div>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <CalendarIcon className="text-[#e0b040]" size={16}/>
-                                        <span className="font-semibold text-gray-600 text-sm">{selectedStart.getFullYear()}</span>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="text-gray-400 py-2 text-sm flex items-center gap-2">
-                                    <Info size={16} />
-                                    <p>Valitse aloituspäivä kalenterista</p>
-                                </div>
-                            )}
-                        </div>
+            {variant === 'full' ? (
+              <div className="w-full flex flex-col animate-slide-in-right">
+                  <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-6 shadow-sm">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                          <div className="flex flex-col">
+                              <h3 className="text-xs sm:text-sm font-semibold text-gray-500 uppercase tracking-wide mb-1">Valittu aika</h3>
+                              {selectedStart ? (
+                                  <div>
+                                      <div className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
+                                          {selectedRangeText}
+                                      </div>
+                                      <div className="flex items-center gap-2 mt-1">
+                                          <CalendarIcon className="text-[#e0b040]" size={16}/>
+                                          <span className="font-semibold text-gray-600 text-sm">{selectedStart.getFullYear()}</span>
+                                      </div>
+                                  </div>
+                              ) : (
+                                  <div className="text-gray-400 py-2 text-sm flex items-center gap-2">
+                                      <Info size={16} />
+                                      <p>Valitse aloituspäivä kalenterista</p>
+                                  </div>
+                              )}
+                          </div>
 
-                        <button
-                            onClick={onContinue}
-                            disabled={!selectedStart || !selectedEnd}
-                            className={`
-                                w-full sm:w-auto py-3 sm:py-3.5 px-6 sm:px-8 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg transition-all
-                                ${selectedStart && selectedEnd
-                                    ? 'bg-[#ffd166] hover:bg-[#ffc642] text-gray-900 shadow-orange-100 hover:shadow-orange-200 transform active:scale-[0.98]' 
-                                    : 'bg-gray-100 text-gray-300 cursor-not-allowed shadow-none'}
-                            `}
-                        >
-                            Jatka <Check size={18} />
-                        </button>
-                    </div>
+                          <button
+                              onClick={onContinue}
+                              disabled={!selectedStart || !selectedEnd}
+                              className={`
+                                  w-full sm:w-auto py-3 sm:py-3.5 px-6 sm:px-8 rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg transition-all
+                                  ${selectedStart && selectedEnd
+                                      ? 'bg-[#ffd166] hover:bg-[#ffc642] text-gray-900 shadow-orange-100 hover:shadow-orange-200 transform active:scale-[0.98]' 
+                                      : 'bg-gray-100 text-gray-300 cursor-not-allowed shadow-none'}
+                              `}
+                          >
+                              Jatka <Check size={18} />
+                          </button>
+                      </div>
+                  </div>
+              </div>
+            ) : (
+              <div className="w-full">
+                <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div className="text-sm font-semibold text-gray-900">
+                    {selectedStart && selectedEnd ? selectedRangeText : 'Valitse ajankohta'}
+                  </div>
+                  <button
+                    onClick={onContinue}
+                    disabled={!selectedStart || !selectedEnd}
+                    className={`w-full sm:w-auto py-2.5 px-5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all
+                      ${selectedStart && selectedEnd
+                        ? 'bg-[#ffd166] hover:bg-[#ffc642] text-gray-900 shadow-orange-100 hover:shadow-orange-200 transform active:scale-[0.98]'
+                        : 'bg-gray-100 text-gray-300 cursor-not-allowed'}`}
+                  >
+                    Valitse <Check size={16} />
+                  </button>
                 </div>
-            </div>
+              </div>
+            )}
         </div>
       )}
     </div>

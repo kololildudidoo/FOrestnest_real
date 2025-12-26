@@ -83,7 +83,7 @@ const ExtrasSelection: React.FC<ExtrasSelectionProps> = ({ startDate, endDate, i
                 <div className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl shadow-sm hover:border-gray-200 transition-colors">
                     <div className="flex flex-col">
                         <span className="font-semibold text-gray-900">Lapset</span>
-                        <span className="text-xs text-gray-500">2-12 vuotiaat</span>
+                        <span className="text-xs text-gray-500">3-12 vuotiaat (alle 3 v maksutta)</span>
                     </div>
                     <div className="flex items-center gap-4">
                         <button 
@@ -131,7 +131,7 @@ const ExtrasSelection: React.FC<ExtrasSelectionProps> = ({ startDate, endDate, i
                             <Flame size={20} />
                         </div>
                         <div>
-                            <span className="block font-semibold text-gray-900">Polttopuut</span>
+                            <span className="block font-semibold text-gray-900">Lisäpolttopuut</span>
                             <span className="text-xs text-gray-500">2 saunavuoroa • + {PRICING.FIREWOOD} €</span>
                         </div>
                     </div>
@@ -173,10 +173,17 @@ const ExtrasSelection: React.FC<ExtrasSelectionProps> = ({ startDate, endDate, i
                     <span>{breakdown.basePriceTotal} €</span>
                 </div>
                 
-                {breakdown.extraPersonTotal > 0 && (
+                {breakdown.extraAdultTotal > 0 && (
                     <div className="flex justify-between text-gray-900 font-medium">
-                        <span>Lisähenkilöt ({breakdown.extraGuests})</span>
-                        <span>{breakdown.extraPersonTotal} €</span>
+                        <span>Lisäaikuiset ({breakdown.extraAdults})</span>
+                        <span>{breakdown.extraAdultTotal} €</span>
+                    </div>
+                )}
+
+                {breakdown.extraChildTotal > 0 && (
+                    <div className="flex justify-between text-gray-900 font-medium">
+                        <span>Lisälapset ({breakdown.extraChildren})</span>
+                        <span>{breakdown.extraChildTotal} €</span>
                     </div>
                 )}
                 

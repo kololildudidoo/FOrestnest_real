@@ -264,16 +264,40 @@ export const fetchBlockedRanges = async (options: FetchBlockedRangesOptions = {}
   }
 };
 
+const sendBookingEmails = async (startDate: Date, endDate: Date, userDetails: UserDetails) => {
+  if (!userDetails?.email) return;
+
+  const payload = {
+    startDate: startDate instanceof Date ? startDate.toISOString() : startDate,
+    endDate: endDate instanceof Date ? endDate.toISOString() : endDate,
+    userDetails,
+  };
+
+  try {
+    await fetch('/api/send-booking-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    console.warn('Failed to send booking email.', error);
+  }
+};
+
 export const createBooking = async (startDate: Date, endDate: Date, userDetails: UserDetails) => {
   if (!isFirebaseEnabled()) {
     console.warn('Firebase not configured; saving booking locally as fallback.');
-    return createBookingInLocalStorage(startDate, endDate, userDetails);
+    const result = await createBookingInLocalStorage(startDate, endDate, userDetails);
+    await sendBookingEmails(startDate, endDate, userDetails);
+    return result;
   }
 
   const db = getDb();
   if (!db) {
     console.warn('Firebase not initialized; saving booking locally as fallback.');
-    return createBookingInLocalStorage(startDate, endDate, userDetails);
+    const result = await createBookingInLocalStorage(startDate, endDate, userDetails);
+    await sendBookingEmails(startDate, endDate, userDetails);
+    return result;
   }
 
   const blocked = await fetchBlockedRanges({ cache: 'network-first' });
@@ -299,10 +323,13 @@ export const createBooking = async (startDate: Date, endDate: Date, userDetails:
     // Update local cache immediately so availability reflects the new booking
     const newRanges = mergeRanges([...blocked, { start: startDate, end: endDate }]);
     writeBlockedRangesCache(newRanges);
+    await sendBookingEmails(startDate, endDate, userDetails);
     return true;
   } catch (error) {
     console.warn('Firestore write failed; saving booking locally as fallback.', error);
-    return createBookingInLocalStorage(startDate, endDate, userDetails);
+    const result = await createBookingInLocalStorage(startDate, endDate, userDetails);
+    await sendBookingEmails(startDate, endDate, userDetails);
+    return result;
   }
 
   return true;

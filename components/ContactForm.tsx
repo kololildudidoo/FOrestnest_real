@@ -189,10 +189,17 @@ const ContactForm: React.FC<ContactFormProps> = ({ startDate, endDate, bookingDe
                     <span>{breakdown.basePriceTotal} €</span>
                 </div>
                 
-                {breakdown.extraPersonTotal > 0 && (
+                {breakdown.extraAdultTotal > 0 && (
                     <div className="flex justify-between text-gray-900 font-medium">
-                        <span>Lisähenkilöt ({breakdown.extraGuests})</span>
-                        <span>{breakdown.extraPersonTotal} €</span>
+                        <span>Lisäaikuiset ({breakdown.extraAdults})</span>
+                        <span>{breakdown.extraAdultTotal} €</span>
+                    </div>
+                )}
+
+                {breakdown.extraChildTotal > 0 && (
+                    <div className="flex justify-between text-gray-900 font-medium">
+                        <span>Lisälapset ({breakdown.extraChildren})</span>
+                        <span>{breakdown.extraChildTotal} €</span>
                     </div>
                 )}
                 

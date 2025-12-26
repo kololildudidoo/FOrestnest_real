@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Star, MapPin, Wifi, User, Users, Calendar,
   Flame, Utensils, Tv, Wind, Coffee, Wine, BookOpen, 
@@ -9,7 +9,7 @@ import {
 import Navbar from './Navbar';
 
 // --- CONFIGURATION ---
-const HERO_IMAGE_URL = "/images/background.png";
+const HERO_IMAGE_URL = "/images/background.jpg";
 const MAP_PREVIEW_URL = "public/images/Screenshot 2025-12-17 at 19.37.06.jpeg";
 const FOREST_NEST_ADDRESS = "Hirsjärvi, Finland";
 const GOOGLE_MAPS_URL = `https://www.google.com/maps/place/60%C2%B033'27.3%22N+23%C2%B040'59.3%22E/@60.557579,23.6805731,17z/data=!3m1!4b1!4m13!1m8!3m7!1s0x468c2c388a0fbf33:0x2600b5523c18fe41!2s31460+Hirsj%C3%A4rvi!3b1!8m2!3d60.6011701!4d23.645668!16s%2Fg%2F120t3zwl!3m3!8m2!3d60.557579!4d23.683148?entry=ttu&g_ep=EgoyMDI1MTIwOS4wIKXMDSoASAFQAw%3D%3D`;
@@ -145,7 +145,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onNavigate })
             </div>
 
 	            {/* Bottom Stats / Floating Elements */}
-	            <div className="absolute bottom-52 w-full px-8 sm:px-12 flex justify-between items-end max-w-[1600px] left-1/2 -translate-x-1/2 pointer-events-none">
+	            <div className="absolute bottom-52 w-full px-8 sm:px-12 flex justify-between items-end max-w-[1600px] left-1/2 -translate-x-1/2 z-20">
 	                 
 	                 {/* Map Badge - Circular Style */}
 	                 <a
@@ -153,7 +153,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onNavigate })
 	                    target="_blank"
 	                    rel="noreferrer"
 	                    aria-label={`Open ${FOREST_NEST_ADDRESS} in Google Maps`}
-	                    className="hidden md:block pointer-events-auto transition-transform hover:scale-105 duration-300 cursor-pointer group focus:outline-none focus-visible:ring-4 focus-visible:ring-[#ffd166]/40 rounded-full"
+	                    className="hidden md:block transition-transform hover:scale-105 duration-300 cursor-pointer group focus:outline-none focus-visible:ring-4 focus-visible:ring-[#ffd166]/40 rounded-full"
 	                 >
 	                    <div className="relative w-40 h-40 rounded-full overflow-hidden border-[3px] border-white/40 ring-4 ring-[#dcb575]/80 shadow-[0_8px_30px_rgb(0,0,0,0.3)] bg-[#e8e4d9]">
 	                         {/* Map Image */}

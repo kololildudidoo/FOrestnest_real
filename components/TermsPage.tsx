@@ -55,7 +55,7 @@ const TermsPage: React.FC<TermsPageProps> = ({ onNavigate, onStartBooking }) => 
                     <p>• No smoking inside the cabin.</p>
                     <p>• Parties or events are not allowed.</p>
                     <p>• Quiet hours are from 22:00 to 07:00.</p>
-                    <p>• Pets are allowed with a prior notification and payment of the pet fee.</p>
+                    <p>• Pets are allowed with a prior notification and payment of the pet fee (20e).</p>
                     <p>• Leave the cabin in a tidy condition. Wash dishes and take out trash.</p>
                 </div>
             </section>

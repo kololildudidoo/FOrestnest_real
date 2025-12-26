@@ -3,6 +3,7 @@ import { User, Mail, FileText, Check, Loader2, AlertCircle, Minus, Plus, PawPrin
 import { formatDateRange, getDaysDifference } from '../utils/dateUtils';
 import { UserDetails } from '../types';
 import { createBooking } from '../services/bookingService';
+import { calculateTotal, PRICING } from '../utils/pricing';
 
 const SUBMIT_TIMEOUT_MS = 8000;
 
@@ -11,14 +12,6 @@ interface UserDetailsFormProps {
   endDate: Date;
   onSubmit: (details: UserDetails) => void;
 }
-
-// Pricing Constants
-const BASE_PRICE_PER_NIGHT = 120; // Assumption based on context
-const EXTRA_PERSON_PRICE_PER_NIGHT = 15;
-const PET_FEE = 20;
-const FIREWOOD_PRICE = 10;
-const LATE_CHECKOUT_PRICE = 40;
-const INCLUDED_GUESTS = 2;
 
 const UserDetailsForm: React.FC<UserDetailsFormProps> = ({ startDate, endDate, onSubmit }) => {
   const [name, setName] = useState('');
@@ -41,15 +34,7 @@ const UserDetailsForm: React.FC<UserDetailsFormProps> = ({ startDate, endDate, o
 
   // Price Calculation
   const nights = Math.max(1, getDaysDifference(startDate, endDate));
-  const totalGuests = adults + children;
-  const extraGuests = Math.max(0, totalGuests - INCLUDED_GUESTS);
-  
-  const basePriceTotal = nights * BASE_PRICE_PER_NIGHT;
-  const extraPersonTotal = extraGuests * EXTRA_PERSON_PRICE_PER_NIGHT * nights;
-  const petTotal = hasPets ? PET_FEE : 0;
-  const extrasTotal = (extras.firewood ? FIREWOOD_PRICE : 0) + (extras.lateCheckout ? LATE_CHECKOUT_PRICE : 0);
-  
-  const finalPrice = basePriceTotal + extraPersonTotal + petTotal + extrasTotal;
+  const { finalPrice, breakdown } = calculateTotal(nights, adults, children, hasPets, extras);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,7 +121,7 @@ const UserDetailsForm: React.FC<UserDetailsFormProps> = ({ startDate, endDate, o
                <div className="flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl shadow-sm">
                   <div className="flex flex-col">
                      <span className="font-semibold text-gray-900">Lapset</span>
-                     <span className="text-xs text-gray-500">2-12 vuotiaat</span>
+                     <span className="text-xs text-gray-500">3-12 vuotiaat (alle 3 v maksutta)</span>
                   </div>
                   <div className="flex items-center gap-4">
                      <button 
@@ -166,7 +151,7 @@ const UserDetailsForm: React.FC<UserDetailsFormProps> = ({ startDate, endDate, o
                      </div>
                      <div>
                         <span className="block font-semibold text-gray-900">Lemmikki mukana</span>
-                        <span className="text-xs text-gray-500">+ {PET_FEE} € / varaus</span>
+                        <span className="text-xs text-gray-500">+ {PRICING.PET_FEE} € / varaus</span>
                      </div>
                   </div>
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${hasPets ? 'border-[#ffd166] bg-[#ffd166]' : 'border-gray-200'}`}>
@@ -187,7 +172,7 @@ const UserDetailsForm: React.FC<UserDetailsFormProps> = ({ startDate, endDate, o
                        </div>
                        <div>
                           <span className="block font-semibold text-gray-900">Polttopuut</span>
-                          <span className="text-xs text-gray-500">2 saunavuoroa • + {FIREWOOD_PRICE} €</span>
+                          <span className="text-xs text-gray-500">2 saunavuoroa • + {PRICING.FIREWOOD} €</span>
                        </div>
                    </div>
                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${extras.firewood ? 'border-[#ffd166] bg-[#ffd166]' : 'border-gray-200'}`}>
@@ -203,7 +188,7 @@ const UserDetailsForm: React.FC<UserDetailsFormProps> = ({ startDate, endDate, o
                        </div>
                        <div>
                           <span className="block font-semibold text-gray-900">Joustava aika</span>
-                          <span className="text-xs text-gray-500">Aikainen sisään / myöhäinen ulos (+2h) • + {LATE_CHECKOUT_PRICE} €</span>
+                          <span className="text-xs text-gray-500">Aikainen sisään / myöhäinen ulos (+2h) • + {PRICING.LATE_CHECKOUT} €</span>
                        </div>
                    </div>
                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${extras.lateCheckout ? 'border-[#ffd166] bg-[#ffd166]' : 'border-gray-200'}`}>
@@ -315,35 +300,42 @@ const UserDetailsForm: React.FC<UserDetailsFormProps> = ({ startDate, endDate, o
                 
                 <div className="space-y-3 text-sm text-gray-300 mb-6">
                     <div className="flex justify-between">
-                        <span>{nights} yötä x {BASE_PRICE_PER_NIGHT} €</span>
-                        <span>{basePriceTotal} €</span>
+                        <span>{nights} yötä x {PRICING.BASE_PRICE} €</span>
+                        <span>{breakdown.basePriceTotal} €</span>
                     </div>
                     
-                    {extraPersonTotal > 0 && (
+                    {breakdown.extraAdultTotal > 0 && (
                         <div className="flex justify-between text-[#ffd166]">
-                           <span>Lisähenkilöt ({extraGuests})</span>
-                           <span>{extraPersonTotal} €</span>
+                           <span>Lisäaikuiset ({breakdown.extraAdults})</span>
+                           <span>{breakdown.extraAdultTotal} €</span>
+                        </div>
+                    )}
+
+                    {breakdown.extraChildTotal > 0 && (
+                        <div className="flex justify-between text-[#ffd166]">
+                           <span>Lisälapset ({breakdown.extraChildren})</span>
+                           <span>{breakdown.extraChildTotal} €</span>
                         </div>
                     )}
                     
-                    {hasPets && (
+                    {breakdown.petTotal > 0 && (
                         <div className="flex justify-between">
                            <span>Lemmikkimaksu</span>
-                           <span>{petTotal} €</span>
+                           <span>{breakdown.petTotal} €</span>
                         </div>
                     )}
 
                     {extras.firewood && (
                         <div className="flex justify-between">
                            <span>Polttopuut</span>
-                           <span>{FIREWOOD_PRICE} €</span>
+                           <span>{PRICING.FIREWOOD} €</span>
                         </div>
                     )}
 
                     {extras.lateCheckout && (
                         <div className="flex justify-between">
                            <span>Joustava aika</span>
-                           <span>{LATE_CHECKOUT_PRICE} €</span>
+                           <span>{PRICING.LATE_CHECKOUT} €</span>
                         </div>
                     )}
 
