@@ -1,16 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   Star, MapPin, Wifi, User, Users, Calendar,
   Flame, Utensils, Tv, Wind, Coffee, Wine, BookOpen, 
   Stethoscope, TreePine, Snowflake, Home, Droplets, Map, Car, 
-  ShieldCheck, Thermometer, Sparkles, Search, ArrowRight, Plus,
+  ShieldCheck, Thermometer, Sparkles, ArrowRight, Plus, Minus, PawPrint, Check,
   Waves, Sun, Bike, Music, Briefcase, Umbrella, Zap, Lock, ShowerHead, Archive, Moon, Mountain
 } from 'lucide-react';
 import Navbar from './Navbar';
+import DateTimeSelection from './DateTimeSelection';
+import { formatDateRange } from '../utils/dateUtils';
+import { BookingPrefill } from '../types';
 
 // --- CONFIGURATION ---
 const HERO_IMAGE_URL = "/images/background.jpg";
-const MAP_PREVIEW_URL = "public/images/Screenshot 2025-12-17 at 19.37.06.jpeg";
+const MAP_PREVIEW_URL = "/images/Screenshot 2025-12-17 at 19.37.06.jpeg";
 const FOREST_NEST_ADDRESS = "Hirsjärvi, Finland";
 const GOOGLE_MAPS_URL = `https://www.google.com/maps/place/60%C2%B033'27.3%22N+23%C2%B040'59.3%22E/@60.557579,23.6805731,17z/data=!3m1!4b1!4m13!1m8!3m7!1s0x468c2c388a0fbf33:0x2600b5523c18fe41!2s31460+Hirsj%C3%A4rvi!3b1!8m2!3d60.6011701!4d23.645668!16s%2Fg%2F120t3zwl!3m3!8m2!3d60.557579!4d23.683148?entry=ttu&g_ep=EgoyMDI1MTIwOS4wIKXMDSoASAFQAw%3D%3D`;
 const LOCATION_MAP_BACKGROUND_URL = "/images/Screenshot 2025-12-17 at 19.37.06.jpeg";
@@ -54,48 +57,66 @@ const REVIEWS = [
 ];
 
 const ALL_AMENITIES = [
+    { icon: <Utensils />, label: "Oven (single)" },
+    { icon: <Wind />, label: "Portable fans" },
+    { icon: <KeyIcon />, label: "Private entrance (Separate street or building entrance)" },
     { icon: <Flame />, label: "Sauna" },
-    { icon: <Wifi />, label: "Fast WiFi" },
-    { icon: <Car />, label: "Free parking" },
-    { icon: <Utensils />, label: "Full Kitchen" },
-    { icon: <Tv />, label: "HD TV" },
-    { icon: <Droplets />, label: "Washing machine" },
-    { icon: <Wind />, label: "AC - Split type" },
-    { icon: <Thermometer />, label: "Indoor fireplace" },
-    { icon: <KeyIcon />, label: "Private entrance" },
-    { icon: <Coffee />, label: "Nespresso" },
-    { icon: <Wine />, label: "Wine glasses" },
-    { icon: <BedIcon />, label: "Premium linen" },
-    { icon: <BookOpen />, label: "Library" },
-    { icon: <Sparkles />, label: "Kids toys" },
+    { icon: <Droplets />, label: "Shower gel" },
     { icon: <ShieldCheck />, label: "Smoke alarm" },
-    { icon: <Stethoscope />, label: "First aid kit" },
-    { icon: <TreePine />, label: "Private Garden" },
-    { icon: <Wind />, label: "Hair dryer" },
-    { icon: <Snowflake />, label: "Refrigerator" },
+    { icon: <Utensils />, label: "Toaster" },
+    { icon: <BedIcon />, label: "Travel cot" },
+    { icon: <Tv />, label: "TV" },
+    { icon: <Droplets />, label: "Washing machine" },
+    { icon: <Wifi />, label: "WiFi (Available throughout the listing)" },
+    { icon: <Wine />, label: "Wine glasses" },
+    { icon: <Wind />, label: "Air conditioning (Portable air conditioning, Window AC unit)" },
     { icon: <Utensils />, label: "BBQ grill" },
-    { icon: <Waves />, label: "Lake access" },
-    { icon: <Sun />, label: "Patio" },
-    { icon: <Bike />, label: "Bikes available" },
-    { icon: <Music />, label: "Sound system" },
-    { icon: <Briefcase />, label: "Workspace" },
-    { icon: <Umbrella />, label: "Outdoor dining" },
-    { icon: <Zap />, label: "EV charger" },
-    { icon: <Lock />, label: "Smart lock" },
-    { icon: <ShowerHead />, label: "Outdoor shower" },
-    { icon: <Archive />, label: "Luggage dropoff" },
-    { icon: <Moon />, label: "Blackout shades" },
-    { icon: <Mountain />, label: "Hiking trails" }
+    { icon: <BedIcon />, label: "Bed linen" },
+    { icon: <Sparkles />, label: "Board games" },
+    { icon: <Droplets />, label: "Body soap" },
+    { icon: <BookOpen />, label: "Books and reading material" },
+    { icon: <ShieldCheck />, label: "Carbon monoxide alarm" },
+    { icon: <Sparkles />, label: "Children’s books and toys" },
+    { icon: <Users />, label: "Children’s playroom (An indoor room with toys, books, and games for children)" },
+    { icon: <Sparkles />, label: "Cleaning products" },
+    { icon: <Wind />, label: "Clothes drying rack" },
+    { icon: <Archive />, label: "Clothes storage (Chest of drawers, Wardrobe)" },
+    { icon: <Coffee />, label: "Coffee" },
+    { icon: <Coffee />, label: "Coffee maker" },
+    { icon: <Droplets />, label: "Conditioner" },
+    { icon: <Utensils />, label: "Cooker (Other)" },
+    { icon: <Utensils />, label: "Cooking basics (Pots and pans, oil, salt, and pepper)" },
+    { icon: <Utensils />, label: "Dining table" },
+    { icon: <Utensils />, label: "Dishes and cutlery (Bowls, chopsticks, plates, cups, etc.)" },
+    { icon: <ShieldCheck />, label: "Fire extinguisher" },
+    { icon: <Stethoscope />, label: "First aid kit" },
+    { icon: <Car />, label: "Free on-street parking" },
+    { icon: <Car />, label: "Free parking on premises" },
+    { icon: <Snowflake />, label: "Freezer" },
+    { icon: <Snowflake />, label: "Fridge" },
+    { icon: <TreePine />, label: "Garden" },
+    { icon: <Wind />, label: "Hair dryer" },
+    { icon: <Archive />, label: "Hangers" },
+    { icon: <Thermometer />, label: "Heating" },
+    { icon: <User />, label: "High chair" }
 ];
 
 interface LandingPageProps {
   onStartBooking: () => void;
+  onStartBookingWithPrefill: (prefill: BookingPrefill) => void;
   onNavigate: (page: string) => void;
 }
 
-const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onNavigate }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onStartBookingWithPrefill, onNavigate }) => {
   const [showAllAmenities, setShowAllAmenities] = useState(false);
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
+  const [activePopover, setActivePopover] = useState<'location' | 'dates' | 'guests' | null>(null);
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [endDate, setEndDate] = useState<Date | null>(null);
+  const [adults, setAdults] = useState(2);
+  const [children, setChildren] = useState(0);
+  const [hasPets, setHasPets] = useState(false);
+  const actionBarRef = useRef<HTMLDivElement | null>(null);
 
   // Auto-rotate reviews every 4 seconds
   useEffect(() => {
@@ -104,6 +125,62 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onNavigate })
     }, 4000);
     return () => clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (actionBarRef.current && !actionBarRef.current.contains(event.target as Node)) {
+        setActivePopover(null);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setActivePopover(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, []);
+
+  const handleWeekSelect = (start: Date, end: Date | null) => {
+    setStartDate(start);
+    setEndDate(end);
+  };
+
+  const handleDateContinue = () => {
+    if (startDate && endDate) {
+      setActivePopover(null);
+    }
+  };
+
+  const handleStartBooking = () => {
+    onStartBookingWithPrefill({
+      startDate,
+      endDate,
+      adults,
+      children,
+      hasPets,
+    });
+    setActivePopover(null);
+  };
+
+  const dateSummary = startDate && endDate
+    ? formatDateRange(startDate, endDate)
+    : startDate
+      ? `${startDate.toLocaleDateString('fi-FI', { month: 'numeric', day: 'numeric' })}. -`
+      : 'Add dates';
+
+  const guestSummaryParts: string[] = [];
+  if (adults > 0) guestSummaryParts.push(`${adults} adult${adults === 1 ? '' : 's'}`);
+  if (children > 0) guestSummaryParts.push(`${children} child${children === 1 ? '' : 'ren'}`);
+  if (hasPets) guestSummaryParts.push('pets');
+  const guestSummary = guestSummaryParts.length ? guestSummaryParts.join(', ') : 'Add guests';
 
   const displayedAmenities = showAllAmenities ? ALL_AMENITIES : ALL_AMENITIES.slice(0, 8);
 
@@ -158,7 +235,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onNavigate })
 	                    <div className="relative w-40 h-40 rounded-full overflow-hidden border-[3px] border-white/40 ring-4 ring-[#dcb575]/80 shadow-[0_8px_30px_rgb(0,0,0,0.3)] bg-[#e8e4d9]">
 	                         {/* Map Image */}
 	                         <img 
-	                            src={MAP_PREVIEW_URL}
+	                            src={encodeURI(MAP_PREVIEW_URL)}
 	                            className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity scale-150" 
 	                            alt="map" 
 	                            style={{ filter: 'sepia(0.2) contrast(1.1)' }}
@@ -196,52 +273,215 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onNavigate })
 
             {/* Action Bar - Rounded Pill Shape */}
             <div 
-                onClick={onStartBooking}
-                className="absolute bottom-16 left-1/2 -translate-x-1/2 w-[92%] max-w-5xl bg-white rounded-full p-2 pr-2 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] flex flex-col sm:flex-row gap-2 cursor-pointer transition-transform hover:scale-[1.01] items-center border border-gray-200"
+                ref={actionBarRef}
+                className="absolute bottom-16 left-1/2 -translate-x-1/2 w-[92%] max-w-5xl bg-white rounded-full p-2 pr-2 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] flex flex-col sm:flex-row gap-2 items-center border border-gray-200"
             >
                 {/* Location */}
-                <div className="flex-1 flex items-center gap-4 px-6 py-3 rounded-full hover:bg-gray-50 transition-colors group w-full sm:w-auto">
-                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-white group-hover:shadow-sm transition-all flex-shrink-0">
-                        <MapPin size={22} />
-                    </div>
-                    <div className="text-left overflow-hidden">
-                        <p className="text-[11px] font-extrabold text-gray-800 uppercase tracking-widest">Location</p>
-	                        <p className="font-medium text-gray-500 truncate">Hirsjärvi, Finland</p>
-                    </div>
+                <div className="relative flex-1 w-full sm:w-auto">
+                    <button
+                        type="button"
+                        onClick={() => setActivePopover(activePopover === 'location' ? null : 'location')}
+                        className={`flex w-full items-center gap-4 px-6 py-3 rounded-full transition-colors group ${activePopover === 'location' ? 'bg-white ring-2 ring-[#ffd166]/40 shadow-sm' : 'hover:bg-gray-50'}`}
+                    >
+                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-white group-hover:shadow-sm transition-all flex-shrink-0">
+                            <MapPin size={22} />
+                        </div>
+                        <div className="text-left overflow-hidden">
+                            <p className="text-[11px] font-extrabold text-gray-800 uppercase tracking-widest">Location</p>
+	                        <p className="font-medium text-gray-500 truncate">{FOREST_NEST_ADDRESS}</p>
+                        </div>
+                    </button>
+
+                    {activePopover === 'location' && (
+                        <div className="absolute bottom-full left-0 mb-4 w-[92vw] sm:w-[380px] z-30">
+                            <div className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-2xl">
+                                <div
+                                    className="relative h-40 bg-cover bg-center"
+                                    style={{ backgroundImage: `url("${encodeURI(LOCATION_MAP_BACKGROUND_URL)}")` }}
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent" />
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="relative w-16 h-16 flex items-center justify-center">
+                                            <div className="absolute w-12 h-12 border border-white/60 rounded-full animate-ping opacity-70" />
+                                            <div className="absolute w-9 h-9 border border-white/80 rounded-full" />
+                                            <div className="w-4 h-4 bg-white rotate-45 rounded-[2px] shadow-sm z-10 relative">
+                                                <div className="absolute inset-0 bg-black/30 blur-[1px] translate-y-1" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="p-4">
+                                    <p className="text-[11px] font-extrabold text-gray-500 uppercase tracking-widest">Map preview</p>
+                                    <p className="text-lg font-semibold text-gray-900">{FOREST_NEST_ADDRESS}</p>
+                                    <a
+                                        href={GOOGLE_MAPS_URL}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-gray-900 hover:text-[#cfa028] transition-colors"
+                                    >
+                                        Open in Google Maps <ArrowRight size={14} />
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Separator */}
                 <div className="hidden sm:block w-px h-10 bg-gray-200" />
 
-                {/* Check In */}
-                <div className="flex-1 flex items-center gap-4 px-6 py-3 rounded-full hover:bg-gray-50 transition-colors group w-full sm:w-auto">
-                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-white group-hover:shadow-sm transition-all flex-shrink-0">
-                        <Calendar size={22} />
-                    </div>
-                    <div className="text-left overflow-hidden">
-                        <p className="text-[11px] font-extrabold text-gray-800 uppercase tracking-widest">Check in</p>
-                        <p className="font-medium text-gray-500 truncate">Add dates</p>
-                    </div>
+                {/* Dates */}
+                <div className="relative flex-1 w-full sm:w-auto">
+                    <button
+                        type="button"
+                        onClick={() => setActivePopover(activePopover === 'dates' ? null : 'dates')}
+                        className={`flex w-full items-center gap-4 px-6 py-3 rounded-full transition-colors group ${activePopover === 'dates' ? 'bg-white ring-2 ring-[#ffd166]/40 shadow-sm' : 'hover:bg-gray-50'}`}
+                    >
+                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-white group-hover:shadow-sm transition-all flex-shrink-0">
+                            <Calendar size={22} />
+                        </div>
+                        <div className="text-left overflow-hidden">
+                            <p className="text-[11px] font-extrabold text-gray-800 uppercase tracking-widest">Dates</p>
+                            <p className="font-medium text-gray-500 truncate">{dateSummary}</p>
+                        </div>
+                    </button>
+
+                    {activePopover === 'dates' && (
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-[92vw] sm:w-[460px] z-30">
+                            <div className="bg-white rounded-[2rem] border border-gray-100 shadow-2xl overflow-hidden">
+                                <DateTimeSelection
+                                    selectedStart={startDate}
+                                    selectedEnd={endDate}
+                                    onWeekSelect={handleWeekSelect}
+                                    onContinue={handleDateContinue}
+                                    variant="popover"
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Separator */}
                 <div className="hidden sm:block w-px h-10 bg-gray-200" />
 
                 {/* Guests */}
-                <div className="flex-1 flex items-center gap-4 px-6 py-3 rounded-full hover:bg-gray-50 transition-colors group w-full sm:w-auto">
-                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-white group-hover:shadow-sm transition-all flex-shrink-0">
-                        <Users size={22} />
-                    </div>
-                    <div className="text-left overflow-hidden">
-                        <p className="text-[11px] font-extrabold text-gray-800 uppercase tracking-widest">Guests</p>
-                        <p className="font-medium text-gray-500 truncate">Add guests</p>
-                    </div>
+                <div className="relative flex-1 w-full sm:w-auto">
+                    <button
+                        type="button"
+                        onClick={() => setActivePopover(activePopover === 'guests' ? null : 'guests')}
+                        className={`flex w-full items-center gap-4 px-6 py-3 rounded-full transition-colors group ${activePopover === 'guests' ? 'bg-white ring-2 ring-[#ffd166]/40 shadow-sm' : 'hover:bg-gray-50'}`}
+                    >
+                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-white group-hover:shadow-sm transition-all flex-shrink-0">
+                            <Users size={22} />
+                        </div>
+                        <div className="text-left overflow-hidden">
+                            <p className="text-[11px] font-extrabold text-gray-800 uppercase tracking-widest">Guests</p>
+                            <p className="font-medium text-gray-500 truncate">{guestSummary}</p>
+                        </div>
+                    </button>
+
+                    {activePopover === 'guests' && (
+                        <div className="absolute bottom-full right-0 mb-4 w-[92vw] sm:w-[360px] z-30">
+                            <div className="bg-white rounded-[2rem] border border-gray-100 shadow-2xl p-5 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-[11px] font-extrabold text-gray-500 uppercase tracking-widest">Guests</p>
+                                    <span className="text-xs text-gray-400">Up to 8 guests</span>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                                        <div>
+                                            <p className="font-semibold text-gray-900">Adults</p>
+                                            <p className="text-xs text-gray-500">Ages 13+</p>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => setAdults(prev => Math.max(1, prev - 1))}
+                                                className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-white transition-colors disabled:opacity-30"
+                                                disabled={adults <= 1}
+                                            >
+                                                <Minus size={16} />
+                                            </button>
+                                            <span className="w-6 text-center font-bold text-gray-900 tabular-nums">{adults}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setAdults(prev => prev + 1)}
+                                                className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-white transition-colors"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-2xl border border-gray-100">
+                                        <div>
+                                            <p className="font-semibold text-gray-900">Children</p>
+                                            <p className="text-xs text-gray-500">Ages 3-12</p>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => setChildren(prev => Math.max(0, prev - 1))}
+                                                className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-white transition-colors disabled:opacity-30"
+                                                disabled={children <= 0}
+                                            >
+                                                <Minus size={16} />
+                                            </button>
+                                            <span className="w-6 text-center font-bold text-gray-900 tabular-nums">{children}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setChildren(prev => prev + 1)}
+                                                className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-white transition-colors"
+                                            >
+                                                <Plus size={16} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setHasPets(prev => !prev)}
+                                        className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all ${hasPets ? 'border-[#ffd166] bg-[#fffbf0]' : 'border-gray-100 bg-gray-50 hover:border-gray-200'}`}
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${hasPets ? 'bg-[#ffd166] text-gray-900' : 'bg-white text-gray-400'}`}>
+                                                <PawPrint size={18} />
+                                            </div>
+                                            <div className="text-left">
+                                                <p className="font-semibold text-gray-900">Pets</p>
+                                                <p className="text-xs text-gray-500">Pet fee applies</p>
+                                            </div>
+                                        </div>
+                                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${hasPets ? 'border-[#ffd166] bg-[#ffd166]' : 'border-gray-200'}`}>
+                                            {hasPets && <Check size={14} className="text-gray-900" strokeWidth={3} />}
+                                        </div>
+                                    </button>
+                                </div>
+
+                                <div className="pt-2 flex justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={() => setActivePopover(null)}
+                                        className="inline-flex items-center gap-2 bg-gray-900 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-black transition-colors"
+                                    >
+                                        Done <ArrowRight size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Search Button */}
                 <div className="pl-2">
-                    <button className="bg-[#ffd166] hover:bg-[#ffc642] text-gray-900 w-12 h-12 sm:w-16 sm:h-16 rounded-full font-bold text-lg shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95">
-                        <Search size={28} strokeWidth={3} />
+                    <button
+                        type="button"
+                        onClick={handleStartBooking}
+                        className="bg-[#ffd166] hover:bg-[#ffc642] text-gray-900 w-12 h-12 sm:w-16 sm:h-16 rounded-full font-bold text-lg shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                        aria-label="Continue to booking"
+                    >
+                        <ArrowRight size={28} strokeWidth={3} />
                     </button>
                 </div>
             </div>

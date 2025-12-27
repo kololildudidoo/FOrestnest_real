@@ -12,6 +12,14 @@ export interface BookingDetails {
   totalPrice: number;
 }
 
+export interface BookingPrefill {
+  startDate: Date | null;
+  endDate: Date | null;
+  adults: number;
+  children: number;
+  hasPets: boolean;
+}
+
 export interface ContactDetails {
   name: string;
   email: string;

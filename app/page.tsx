@@ -11,7 +11,7 @@ import ExperiencesPage from '../components/ExperiencesPage';
 import TermsPage from '../components/TermsPage';
 import GalleryPage from '../components/GalleryPage';
 import ContactPage from '../components/ContactPage';
-import { BookingState, BookingDetails, ContactDetails } from '../types';
+import { BookingState, BookingDetails, ContactDetails, BookingPrefill } from '../types';
 
 type ViewState = 'landing' | 'booking' | 'experiences' | 'terms' | 'gallery' | 'contact';
 
@@ -97,6 +97,25 @@ const Page: React.FC = () => {
     });
   };
 
+  const startBookingWithPrefill = (prefill: BookingPrefill) => {
+    const hasDates = Boolean(prefill.startDate && prefill.endDate);
+
+    setBookingState(prev => ({
+      ...prev,
+      step: hasDates ? 'extras' : 'date-time',
+      startDate: prefill.startDate,
+      endDate: prefill.endDate,
+      bookingDetails: {
+        ...prev.bookingDetails,
+        adults: prefill.adults,
+        children: prefill.children,
+        hasPets: prefill.hasPets,
+      },
+    }));
+
+    setView('booking');
+  };
+
   const navigateTo = (page: string) => {
       const normalizedPage = page === 'location' || page === 'locations' ? 'contact' : page;
       if (['landing', 'booking', 'experiences', 'terms', 'gallery', 'contact'].includes(normalizedPage)) {
@@ -113,7 +132,13 @@ const Page: React.FC = () => {
   if (view === 'contact') return <ContactPage onNavigate={navigateTo} onStartBooking={startBooking} />;
 
   if (view === 'landing') {
-    return <LandingPage onStartBooking={startBooking} onNavigate={navigateTo} />;
+    return (
+      <LandingPage
+        onStartBooking={startBooking}
+        onStartBookingWithPrefill={startBookingWithPrefill}
+        onNavigate={navigateTo}
+      />
+    );
   }
 
   return (
