@@ -1,20 +1,18 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { galleryImages as localGalleryImages } from 'virtual:gallery-images';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import Navbar from './Navbar';
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { getDb, isFirebaseEnabled } from '../services/firebase';
 
 type GalleryImage = {
   src: string;
-  alt: string;
-};
-
-type GalleryCaption = {
   title: string;
   subtitle: string;
 };
 
-const GALLERY_CAPTIONS: Record<string, GalleryCaption> = {
+const GALLERY_CAPTIONS: Record<string, { title: string; subtitle: string }> = {
   '/gallery/JPA02140_1_2_3_4_Enhancer-min.jpg': {
     title: 'Living room',
     subtitle: 'Cozy timber lounge with sofa bed and warm evening lighting.',
@@ -77,15 +75,6 @@ const GALLERY_CAPTIONS: Record<string, GalleryCaption> = {
   },
 };
 
-const getCaption = (image: GalleryImage): GalleryCaption => {
-  const caption = GALLERY_CAPTIONS[image.src];
-  if (caption) {
-    return caption;
-  }
-
-  return { title: image.alt, subtitle: '' };
-};
-
 interface GalleryPageProps {
   onNavigate: (page: string) => void;
   onStartBooking: () => void;
@@ -93,23 +82,30 @@ interface GalleryPageProps {
 
 const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate, onStartBooking }) => {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [remoteImages, setRemoteImages] = useState<GalleryImage[]>([]);
 
   const defaultImages: GalleryImage[] = [
-    { src: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?q=80&w=1000", alt: "Living Room" },
-    { src: "https://images.unsplash.com/photo-1616594039964-408359566a05?q=80&w=800", alt: "Master Bedroom" },
-    { src: "https://images.unsplash.com/photo-1556912173-3db996ea1247?q=80&w=800", alt: "Kitchen" },
-    { src: "https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000", alt: "Forest Exterior" },
-    { src: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=800", alt: "Sauna" },
-    { src: "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?q=80&w=800", alt: "Bathroom" },
-    { src: "https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?q=80&w=800", alt: "Fireplace" },
-    { src: "https://images.unsplash.com/photo-1504643039591-52948e3ddb47?q=80&w=800", alt: "Details" },
-    { src: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1200", alt: "Patio" },
+    { src: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?q=80&w=1000", title: "Living Room", subtitle: "" },
+    { src: "https://images.unsplash.com/photo-1616594039964-408359566a05?q=80&w=800", title: "Master Bedroom", subtitle: "" },
+    { src: "https://images.unsplash.com/photo-1556912173-3db996ea1247?q=80&w=800", title: "Kitchen", subtitle: "" },
+    { src: "https://images.unsplash.com/photo-1510798831971-661eb04b3739?q=80&w=1000", title: "Forest Exterior", subtitle: "" },
+    { src: "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?q=80&w=800", title: "Sauna", subtitle: "" },
+    { src: "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?q=80&w=800", title: "Bathroom", subtitle: "" },
+    { src: "https://images.unsplash.com/photo-1605276374104-dee2a0ed3cd6?q=80&w=800", title: "Fireplace", subtitle: "" },
+    { src: "https://images.unsplash.com/photo-1504643039591-52948e3ddb47?q=80&w=800", title: "Details", subtitle: "" },
+    { src: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1200", title: "Patio", subtitle: "" },
   ];
 
-  const localImages: GalleryImage[] = localGalleryImages;
+  const localImages: GalleryImage[] = localGalleryImages.map((image) => {
+    const caption = GALLERY_CAPTIONS[image.src];
+    return {
+      src: image.src,
+      title: caption?.title ?? image.alt,
+      subtitle: caption?.subtitle ?? '',
+    };
+  });
 
-  const images = localImages.length ? localImages : defaultImages;
-  const captions = useMemo(() => images.map(getCaption), [images]);
+  const images = remoteImages.length ? remoteImages : (localImages.length ? localImages : defaultImages);
 
   const closeLightbox = () => setActiveIndex(null);
 
@@ -122,6 +118,37 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate, onStartBooking })
     if (activeIndex === null) return;
     setActiveIndex((activeIndex + 1) % images.length);
   };
+
+  useEffect(() => {
+    if (!isFirebaseEnabled()) {
+      return;
+    }
+
+    const db = getDb();
+    if (!db) {
+      return;
+    }
+
+    const galleryQuery = query(collection(db, 'gallery'), orderBy('order', 'asc'));
+    return onSnapshot(galleryQuery, (snapshot) => {
+      const nextImages = snapshot.docs
+        .map((doc) => {
+          const data = doc.data() as Partial<GalleryImage>;
+          const src = data.src?.toString().trim();
+          if (!src) return null;
+          return {
+            src,
+            title: data.title?.toString().trim() || 'Gallery image',
+            subtitle: data.subtitle?.toString().trim() || '',
+          } as GalleryImage;
+        })
+        .filter((image): image is GalleryImage => Boolean(image));
+
+      if (nextImages.length) {
+        setRemoteImages(nextImages);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     if (activeIndex === null) {
@@ -152,6 +179,12 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate, onStartBooking })
     };
   }, [activeIndex, images.length]);
 
+  useEffect(() => {
+    if (activeIndex !== null && activeIndex >= images.length) {
+      setActiveIndex(null);
+    }
+  }, [activeIndex, images.length]);
+
   const lightbox =
     activeIndex !== null && typeof document !== 'undefined'
       ? createPortal(
@@ -179,7 +212,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate, onStartBooking })
                 <div className="relative bg-black flex items-center justify-center">
                   <img
                     src={images[activeIndex].src}
-                    alt={captions[activeIndex].title}
+                    alt={images[activeIndex].title}
                     className="w-full h-full object-contain"
                   />
 
@@ -206,10 +239,10 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate, onStartBooking })
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <div className="text-lg sm:text-xl font-semibold text-gray-900">
-                        {captions[activeIndex].title}
+                        {images[activeIndex].title}
                       </div>
-                      {captions[activeIndex].subtitle ? (
-                        <div className="text-gray-500 mt-1">{captions[activeIndex].subtitle}</div>
+                      {images[activeIndex].subtitle ? (
+                        <div className="text-gray-500 mt-1">{images[activeIndex].subtitle}</div>
                       ) : null}
                     </div>
 
@@ -255,21 +288,21 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate, onStartBooking })
               key={img.src}
               type="button"
               onClick={() => setActiveIndex(idx)}
-              aria-label={`Open image: ${captions[idx].title}`}
+              aria-label={`Open image: ${images[idx].title}`}
               className="mb-4 break-inside-avoid w-full text-left"
             >
               <div className="relative rounded-3xl overflow-hidden group cursor-pointer bg-gray-100">
                 <img
                   src={img.src}
-                  alt={captions[idx].title}
+                  alt={images[idx].title}
                   className="w-full h-auto block object-cover transition-transform duration-700 group-hover:scale-105"
                   loading="lazy"
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300" />
                 <div className="absolute bottom-4 left-4 right-4 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300 drop-shadow">
-                  <div className="font-semibold">{captions[idx].title}</div>
-                  {captions[idx].subtitle ? (
-                    <div className="text-sm text-white/90 mt-0.5">{captions[idx].subtitle}</div>
+                  <div className="font-semibold">{images[idx].title}</div>
+                  {images[idx].subtitle ? (
+                    <div className="text-sm text-white/90 mt-0.5">{images[idx].subtitle}</div>
                   ) : null}
                 </div>
               </div>

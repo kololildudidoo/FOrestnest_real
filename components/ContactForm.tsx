@@ -87,7 +87,7 @@ const ContactForm: React.FC<ContactFormProps> = ({ startDate, endDate, bookingDe
             </button>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Viimeistele varaus</h2>
-            <p className="text-gray-500 text-sm mb-6">Täytä yhteystietosi varauksen vahvistamiseksi.</p>
+            <p className="text-gray-500 text-sm mb-6">Täytä yhteystietosi varauspyynnön lähettämiseksi.</p>
 
             {/* Contact Details */}
             <div className="space-y-4 max-w-xl">

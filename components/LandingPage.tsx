@@ -10,6 +10,8 @@ import Navbar from './Navbar';
 import DateTimeSelection from './DateTimeSelection';
 import { formatDateRange } from '../utils/dateUtils';
 import { BookingPrefill } from '../types';
+import { getDb, isFirebaseEnabled } from '../services/firebase';
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 
 // --- CONFIGURATION ---
 const HERO_IMAGE_URL = "/images/background.jpg";
@@ -35,7 +37,14 @@ const BedIcon = () => (
 );
 
 // --- DATA ---
-const REVIEWS = [
+type Review = {
+    name: string;
+    date: string;
+    text: string;
+    img: string;
+};
+
+const DEFAULT_REVIEWS: Review[] = [
     {
         name: "Juhani",
         date: "Oct 2023",
@@ -110,6 +119,7 @@ interface LandingPageProps {
 const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onStartBookingWithPrefill, onNavigate }) => {
   const [showAllAmenities, setShowAllAmenities] = useState(false);
   const [currentReviewIndex, setCurrentReviewIndex] = useState(0);
+  const [reviews, setReviews] = useState<Review[]>(DEFAULT_REVIEWS);
   const [activePopover, setActivePopover] = useState<'location' | 'dates' | 'guests' | null>(null);
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
@@ -120,10 +130,49 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onStartBookin
 
   // Auto-rotate reviews every 4 seconds
   useEffect(() => {
+    if (reviews.length <= 1) {
+      return;
+    }
     const timer = setInterval(() => {
-        setCurrentReviewIndex((prev) => (prev + 1) % REVIEWS.length);
+        setCurrentReviewIndex((prev) => (prev + 1) % reviews.length);
     }, 4000);
     return () => clearInterval(timer);
+  }, [reviews.length]);
+
+  useEffect(() => {
+    setCurrentReviewIndex(0);
+  }, [reviews.length]);
+
+  useEffect(() => {
+    if (!isFirebaseEnabled()) {
+      return;
+    }
+
+    const db = getDb();
+    if (!db) {
+      return;
+    }
+
+    const reviewsQuery = query(collection(db, 'reviews'), orderBy('createdAt', 'desc'));
+    return onSnapshot(reviewsQuery, (snapshot) => {
+      const nextReviews = snapshot.docs
+        .map((doc) => {
+          const data = doc.data() as Partial<Review> & { img?: string; date?: string };
+          const name = data.name?.toString().trim() || 'Guest';
+          const img = data.img?.toString().trim() || `https://i.pravatar.cc/100?u=${encodeURIComponent(name)}`;
+          return {
+            name,
+            date: data.date?.toString().trim() || '',
+            text: data.text?.toString().trim() || '',
+            img,
+          } as Review;
+        })
+        .filter((review) => review.text);
+
+      if (nextReviews.length) {
+        setReviews(nextReviews);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -183,6 +232,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onStartBookin
   const guestSummary = guestSummaryParts.length ? guestSummaryParts.join(', ') : 'Add guests';
 
   const displayedAmenities = showAllAmenities ? ALL_AMENITIES : ALL_AMENITIES.slice(0, 8);
+  const hasCompleteDates = Boolean(startDate && endDate);
 
   return (
     <div className="min-h-screen bg-white font-sans text-gray-900">
@@ -274,7 +324,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onStartBookin
             {/* Action Bar - Rounded Pill Shape */}
             <div 
                 ref={actionBarRef}
-                className="absolute bottom-16 left-1/2 -translate-x-1/2 w-[92%] max-w-5xl bg-white rounded-full p-2 pr-2 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] flex flex-col sm:flex-row gap-2 items-center border border-gray-200"
+                className={`absolute bottom-16 left-1/2 -translate-x-1/2 bg-white rounded-full p-2 pr-2 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] flex flex-col sm:flex-row gap-2 items-center border border-gray-200 z-[60] transition-all duration-500 ease-out overflow-visible ${hasCompleteDates ? 'w-[94%] sm:max-w-[1060px]' : 'w-[92%] sm:max-w-5xl'}`}
             >
                 {/* Location */}
                 <div className="relative flex-1 w-full sm:w-auto">
@@ -293,7 +343,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onStartBookin
                     </button>
 
                     {activePopover === 'location' && (
-                        <div className="absolute bottom-full left-0 mb-4 w-[92vw] sm:w-[380px] z-30">
+                        <div className="absolute bottom-full left-0 mb-4 w-[92vw] sm:w-[380px] z-[70]">
                             <div className="bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-2xl">
                                 <div
                                     className="relative h-40 bg-cover bg-center"
@@ -347,7 +397,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onStartBookin
                     </button>
 
                     {activePopover === 'dates' && (
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-[92vw] sm:w-[460px] z-30">
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 w-[92vw] sm:w-[460px] z-[70]">
                             <div className="bg-white rounded-[2rem] border border-gray-100 shadow-2xl overflow-hidden">
                                 <DateTimeSelection
                                     selectedStart={startDate}
@@ -365,14 +415,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onStartBookin
                 <div className="hidden sm:block w-px h-10 bg-gray-200" />
 
                 {/* Guests */}
-                <div className="relative flex-1 w-full sm:w-auto">
+                <div className="relative flex-1 w-full sm:w-auto sm:flex-[0.85]">
                     <button
                         type="button"
                         onClick={() => setActivePopover(activePopover === 'guests' ? null : 'guests')}
-                        className={`flex w-full items-center gap-4 px-6 py-3 rounded-full transition-colors group ${activePopover === 'guests' ? 'bg-white ring-2 ring-[#ffd166]/40 shadow-sm' : 'hover:bg-gray-50'}`}
+                        className={`flex w-full items-center gap-3 px-5 py-2.5 rounded-full transition-colors group ${activePopover === 'guests' ? 'bg-white ring-2 ring-[#ffd166]/40 shadow-sm' : 'hover:bg-gray-50'}`}
                     >
-                        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-white group-hover:shadow-sm transition-all flex-shrink-0">
-                            <Users size={22} />
+                        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 group-hover:bg-white group-hover:shadow-sm transition-all flex-shrink-0">
+                            <Users size={20} />
                         </div>
                         <div className="text-left overflow-hidden">
                             <p className="text-[11px] font-extrabold text-gray-800 uppercase tracking-widest">Guests</p>
@@ -381,7 +431,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onStartBookin
                     </button>
 
                     {activePopover === 'guests' && (
-                        <div className="absolute bottom-full right-0 mb-4 w-[92vw] sm:w-[360px] z-30">
+                        <div className="absolute bottom-full right-0 mb-4 w-[92vw] sm:w-[360px] z-[70]">
                             <div className="bg-white rounded-[2rem] border border-gray-100 shadow-2xl p-5 space-y-4">
                                 <div className="flex items-center justify-between">
                                     <p className="text-[11px] font-extrabold text-gray-500 uppercase tracking-widest">Guests</p>
@@ -474,11 +524,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onStartBookin
                 </div>
 
                 {/* Search Button */}
-                <div className="pl-2">
+                <div className={`flex items-center justify-center transition-all duration-500 ease-out ${hasCompleteDates ? 'w-12 sm:w-16' : 'w-0'}`}>
                     <button
                         type="button"
                         onClick={handleStartBooking}
-                        className="bg-[#ffd166] hover:bg-[#ffc642] text-gray-900 w-12 h-12 sm:w-16 sm:h-16 rounded-full font-bold text-lg shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+                        tabIndex={hasCompleteDates ? 0 : -1}
+                        aria-hidden={!hasCompleteDates}
+                        className={`bg-[#ffd166] hover:bg-[#ffc642] text-gray-900 w-12 h-12 sm:w-16 sm:h-16 rounded-full font-bold text-lg shadow-lg flex items-center justify-center transition-all shrink-0 ${hasCompleteDates ? 'scale-100 opacity-100' : 'scale-75 opacity-0 pointer-events-none'} hover:scale-110 active:scale-95`}
                         aria-label="Continue to booking"
                     >
                         <ArrowRight size={28} strokeWidth={3} />
@@ -505,13 +557,20 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onStartBookin
                     
                     <div className="flex items-center gap-6 pt-4 border-t border-gray-100 mt-4">
                         <div className="flex -space-x-4">
-                            {[1,2,3].map(i => (
-                                <img key={i} src={`https://i.pravatar.cc/100?img=${i+20}`} className="w-12 h-12 rounded-full border-4 border-white shadow-sm" alt="host" />
-                            ))}
+                            <img
+                                src="/images/host-support.png"
+                                className="w-12 h-12 rounded-full border-4 border-white shadow-sm relative z-0"
+                                alt="Co-host"
+                            />
+                            <img
+                                src="/images/host-keanne.png"
+                                className="w-12 h-12 rounded-full border-4 border-white shadow-sm relative z-10"
+                                alt="Keanne"
+                            />
                         </div>
                         <div className="text-sm">
-                            <p className="font-bold text-gray-900 text-base">Hosted by Sarah & Tom</p>
-                            <p className="text-gray-400">Superhosts • 5 year hosting</p>
+                            <p className="font-bold text-gray-900 text-base">Hosted by Keanne</p>
+                            <p className="text-gray-400">Host for 2 years</p>
                         </div>
                     </div>
                 </div>
@@ -636,19 +695,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onStartBookin
                         <div className="flex gap-1 mb-4">
                             {[1,2,3,4,5].map(star => <Star key={star} size={16} className="text-gray-900" fill="black" />)}
                         </div>
-                        <p className="text-gray-600 font-light text-lg mb-6 leading-relaxed">"{REVIEWS[currentReviewIndex].text}"</p>
+                                <p className="text-gray-600 font-light text-lg mb-6 leading-relaxed">"{reviews[currentReviewIndex].text}"</p>
                         <div className="flex items-center gap-4 mt-auto">
-                            <img src={REVIEWS[currentReviewIndex].img} alt={REVIEWS[currentReviewIndex].name} className="w-12 h-12 rounded-full object-cover" />
+                            <img src={reviews[currentReviewIndex].img} alt={reviews[currentReviewIndex].name} className="w-12 h-12 rounded-full object-cover" />
                             <div>
-                                <p className="font-bold text-gray-900">{REVIEWS[currentReviewIndex].name}</p>
-                                <p className="text-sm text-gray-400">{REVIEWS[currentReviewIndex].date}</p>
+                                <p className="font-bold text-gray-900">{reviews[currentReviewIndex].name}</p>
+                                <p className="text-sm text-gray-400">{reviews[currentReviewIndex].date}</p>
                             </div>
                         </div>
                     </div>
                     
                     {/* Progress Indicators */}
                     <div className="flex gap-2 mt-6 justify-center xl:justify-start">
-                       {REVIEWS.map((_, idx) => (
+                       {reviews.map((_, idx) => (
                            <div 
                               key={idx} 
                               className={`h-1.5 rounded-full transition-all duration-300 ${idx === currentReviewIndex ? 'w-8 bg-gray-900' : 'w-2 bg-gray-300'}`}

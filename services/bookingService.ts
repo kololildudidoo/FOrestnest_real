@@ -14,7 +14,7 @@ type StoredBooking = {
   endDate: string;
   userDetails: UserDetails;
   createdAt: string;
-  status: 'confirmed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'rejected' | 'cancelled';
 };
 
 const rangesOverlap = (startA: Date, endA: Date, startB: Date, endB: Date) => {
@@ -155,7 +155,10 @@ const runWithTimeout = async <T>(promise: Promise<T>, timeoutMs: number, label: 
 };
 
 const fetchIcalBlockedRanges = async (): Promise<BlockedRange[]> => {
-  const url = typeof __AIRBNB_ICAL_URL__ === 'string' ? __AIRBNB_ICAL_URL__.trim() : '';
+  const rawUrl = typeof __AIRBNB_ICAL_URL__ === 'string' ? __AIRBNB_ICAL_URL__.trim() : '';
+  const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+  const isLocalHost = /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/.test(hostname);
+  const url = rawUrl || (isLocalHost ? '' : '/api/airbnb-ical');
   if (!url) {
     return [];
   }
@@ -170,6 +173,9 @@ const fetchIcalBlockedRanges = async (): Promise<BlockedRange[]> => {
       throw new Error(`iCal fetch failed (${response.status})`);
     }
     const text = await response.text();
+    if (!text.includes('BEGIN:VCALENDAR')) {
+      throw new Error('iCal payload missing VCALENDAR');
+    }
     const events = parseIcalEvents(text);
 
     const ranges = events
@@ -312,7 +318,7 @@ export const createBooking = async (startDate: Date, endDate: Date, userDetails:
         startDate,
         endDate,
         userDetails,
-        status: 'confirmed',
+        status: 'pending',
         createdAt: serverTimestamp(),
         source: 'website',
       }),
@@ -320,9 +326,6 @@ export const createBooking = async (startDate: Date, endDate: Date, userDetails:
       'Firestore booking write'
     );
 
-    // Update local cache immediately so availability reflects the new booking
-    const newRanges = mergeRanges([...blocked, { start: startDate, end: endDate }]);
-    writeBlockedRangesCache(newRanges);
     await sendBookingEmails(startDate, endDate, userDetails);
     return true;
   } catch (error) {
@@ -345,7 +348,7 @@ const createBookingInLocalStorage = async (startDate: Date, endDate: Date, userD
       endDate: endDate.toISOString(),
       userDetails,
       createdAt: new Date().toISOString(),
-      status: 'confirmed'
+      status: 'pending'
     };
 
     bookings.push(newBooking);

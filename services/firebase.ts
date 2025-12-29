@@ -1,5 +1,7 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getAuth, type Auth } from 'firebase/auth';
+import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
 type FirebaseWebConfig = {
   apiKey: string;
@@ -52,6 +54,8 @@ const getConfig = (): FirebaseWebConfig | null => {
 
 let cachedApp: FirebaseApp | null = null;
 let cachedDb: Firestore | null = null;
+let cachedAuth: Auth | null = null;
+let cachedStorage: FirebaseStorage | null = null;
 
 export const isFirebaseEnabled = (): boolean => Boolean(getConfig());
 
@@ -81,4 +85,32 @@ export const getDb = (): Firestore | null => {
 
   cachedDb = getFirestore(app);
   return cachedDb;
+};
+
+export const getAuthClient = (): Auth | null => {
+  if (cachedAuth) {
+    return cachedAuth;
+  }
+
+  const app = getFirebaseApp();
+  if (!app) {
+    return null;
+  }
+
+  cachedAuth = getAuth(app);
+  return cachedAuth;
+};
+
+export const getStorageClient = (): FirebaseStorage | null => {
+  if (cachedStorage) {
+    return cachedStorage;
+  }
+
+  const app = getFirebaseApp();
+  if (!app) {
+    return null;
+  }
+
+  cachedStorage = getStorage(app);
+  return cachedStorage;
 };

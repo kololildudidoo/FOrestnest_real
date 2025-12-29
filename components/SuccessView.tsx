@@ -17,9 +17,9 @@ const SuccessView: React.FC<SuccessViewProps> = ({ bookingData, onReset }) => {
                 <Check className="w-10 h-10 text-[#e0b040]" strokeWidth={3} />
             </div>
             
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Varaus vahvistettu!</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Varauspyyntö vastaanotettu!</h1>
             <p className="text-gray-500 mb-8 max-w-md">
-                Kaikki on valmista, {contactDetails?.name}. Olemme lähettäneet vahvistuksen ja maksulinkin osoitteeseen {contactDetails?.email}.
+                Kiitos, {contactDetails?.name}. Vahvistamme saatavuuden ja palaamme sinulle sähköpostitse osoitteeseen {contactDetails?.email}.
             </p>
 
             <div className="w-full max-w-sm bg-white border border-gray-100 rounded-2xl shadow-lg p-6 mb-8 text-left relative overflow-hidden">

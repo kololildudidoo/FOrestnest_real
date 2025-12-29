@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import BookingLayout from '../components/BookingLayout';
 import DateTimeSelection from '../components/DateTimeSelection';
 import ExtrasSelection from '../components/ExtrasSelection';
@@ -11,12 +11,14 @@ import ExperiencesPage from '../components/ExperiencesPage';
 import TermsPage from '../components/TermsPage';
 import GalleryPage from '../components/GalleryPage';
 import ContactPage from '../components/ContactPage';
+import AdminDashboard from '../components/AdminDashboard';
 import { BookingState, BookingDetails, ContactDetails, BookingPrefill } from '../types';
 
 type ViewState = 'landing' | 'booking' | 'experiences' | 'terms' | 'gallery' | 'contact';
 
 const Page: React.FC = () => {
   const [view, setView] = useState<ViewState>('landing');
+  const [isAdminRoute, setIsAdminRoute] = useState(false);
   const [bookingState, setBookingState] = useState<BookingState>({
     step: 'date-time',
     resource: 'art-suitcase',
@@ -125,6 +127,20 @@ const Page: React.FC = () => {
   };
 
   const startBooking = () => setView('booking');
+
+  useEffect(() => {
+    const updateRoute = () => {
+      if (typeof window === 'undefined') return;
+      setIsAdminRoute(window.location.pathname.startsWith('/forestadmin'));
+    };
+    updateRoute();
+    window.addEventListener('popstate', updateRoute);
+    return () => window.removeEventListener('popstate', updateRoute);
+  }, []);
+
+  if (isAdminRoute) {
+    return <AdminDashboard />;
+  }
 
   if (view === 'experiences') return <ExperiencesPage onNavigate={navigateTo} onStartBooking={startBooking} />;
   if (view === 'terms') return <TermsPage onNavigate={navigateTo} onStartBooking={startBooking} />;
