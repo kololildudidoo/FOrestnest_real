@@ -1,12 +1,8 @@
 import { UserDetails } from '../types';
-import { addDoc, collection, getDocs, query, serverTimestamp, type DocumentData, where } from 'firebase/firestore';
-import { getDb, isFirebaseEnabled } from './firebase';
 import { parseIcalEvents, toInclusiveDateRange } from '../utils/ical';
 
 const STORAGE_KEY = 'artbooker_bookings';
 const BLOCKED_RANGES_CACHE_KEY = 'forestnest_blocked_ranges_cache_v1';
-const FIRESTORE_TIMEOUT_MS = 4000;
-
 type BlockedRange = { start: Date; end: Date };
 
 type StoredBooking = {
@@ -23,37 +19,6 @@ const rangesOverlap = (startA: Date, endA: Date, startB: Date, endB: Date) => {
   const bStart = new Date(startB); bStart.setHours(0, 0, 0, 0);
   const bEnd = new Date(endB); bEnd.setHours(0, 0, 0, 0);
   return aStart <= bEnd && aEnd >= bStart;
-};
-
-const parseDateLike = (value: unknown): Date | null => {
-  if (!value) return null;
-  if (value instanceof Date) return value;
-  if (typeof value === 'string') {
-    const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? null : d;
-  }
-  if (typeof value === 'object' && typeof (value as any).toDate === 'function') {
-    try {
-      return (value as any).toDate();
-    } catch {
-      return null;
-    }
-  }
-  return null;
-};
-
-const toBlockedRangesFromDoc = (data: DocumentData): BlockedRange | null => {
-  if (data?.status && data.status !== 'confirmed') {
-    return null;
-  }
-
-  const start = parseDateLike(data?.startDate);
-  const end = parseDateLike(data?.endDate);
-  if (!start || !end) {
-    return null;
-  }
-
-  return { start, end };
 };
 
 let cachedIcalRanges: { fetchedAt: number; ranges: BlockedRange[] } | null = null;
@@ -145,15 +110,6 @@ const fetchWithTimeout = async (url: string, timeoutMs: number) => {
   }
 };
 
-const runWithTimeout = async <T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> => {
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    const id = window.setTimeout(() => reject(new Error(`${label} timed out`)), timeoutMs);
-    // Clear timer when original settles
-    promise.finally(() => window.clearTimeout(id));
-  });
-  return Promise.race([promise, timeoutPromise]) as Promise<T>;
-};
-
 const fetchIcalBlockedRanges = async (): Promise<BlockedRange[]> => {
   const rawUrl = typeof __AIRBNB_ICAL_URL__ === 'string' ? __AIRBNB_ICAL_URL__.trim() : '';
   const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
@@ -209,35 +165,11 @@ const fetchBlockedRangesFromLocalStorage = async (): Promise<BlockedRange[]> => 
 };
 
 const fetchBlockedRangesNetwork = async (): Promise<BlockedRange[]> => {
-  const icalPromise = fetchIcalBlockedRanges();
-
-  if (!isFirebaseEnabled()) {
-    const [icalRanges, localRanges] = await Promise.all([icalPromise, fetchBlockedRangesFromLocalStorage()]);
-    return mergeRanges([...icalRanges, ...localRanges]);
-  }
-
-  const db = getDb();
-  if (!db) {
-    const [icalRanges, localRanges] = await Promise.all([icalPromise, fetchBlockedRangesFromLocalStorage()]);
-    return mergeRanges([...icalRanges, ...localRanges]);
-  }
-
-  const bookingsQuery = query(collection(db, 'bookings'), where('status', '==', 'confirmed'));
-  const firestorePromise = (async () => {
-    const snapshot = await runWithTimeout(getDocs(bookingsQuery), FIRESTORE_TIMEOUT_MS, 'Firestore availability fetch');
-    return snapshot.docs
-      .map(doc => toBlockedRangesFromDoc(doc.data()))
-      .filter((range): range is BlockedRange => Boolean(range));
-  })();
-
-  try {
-    const [icalRanges, firebaseRanges] = await Promise.all([icalPromise, firestorePromise]);
-    return mergeRanges([...icalRanges, ...firebaseRanges]);
-  } catch (error) {
-    console.warn('Availability fetch (Firestore) failed; falling back to cached/local ranges.', error);
-    const [icalRanges, localRanges] = await Promise.all([icalPromise, fetchBlockedRangesFromLocalStorage()]);
-    return mergeRanges([...icalRanges, ...localRanges]);
-  }
+  const [icalRanges, localRanges] = await Promise.all([
+    fetchIcalBlockedRanges(),
+    fetchBlockedRangesFromLocalStorage(),
+  ]);
+  return mergeRanges([...icalRanges, ...localRanges]);
 };
 
 export const fetchBlockedRanges = async (options: FetchBlockedRangesOptions = {}): Promise<BlockedRange[]> => {
@@ -291,21 +223,6 @@ const sendBookingEmails = async (startDate: Date, endDate: Date, userDetails: Us
 };
 
 export const createBooking = async (startDate: Date, endDate: Date, userDetails: UserDetails) => {
-  if (!isFirebaseEnabled()) {
-    console.warn('Firebase not configured; saving booking locally as fallback.');
-    const result = await createBookingInLocalStorage(startDate, endDate, userDetails);
-    await sendBookingEmails(startDate, endDate, userDetails);
-    return result;
-  }
-
-  const db = getDb();
-  if (!db) {
-    console.warn('Firebase not initialized; saving booking locally as fallback.');
-    const result = await createBookingInLocalStorage(startDate, endDate, userDetails);
-    await sendBookingEmails(startDate, endDate, userDetails);
-    return result;
-  }
-
   const blocked = await fetchBlockedRanges({ cache: 'network-first' });
   const overlapsExisting = blocked.some(range => rangesOverlap(startDate, endDate, range.start, range.end));
   if (overlapsExisting) {
@@ -313,29 +230,13 @@ export const createBooking = async (startDate: Date, endDate: Date, userDetails:
   }
 
   try {
-    await runWithTimeout(
-      addDoc(collection(db, 'bookings'), {
-        startDate,
-        endDate,
-        userDetails,
-        status: 'pending',
-        createdAt: serverTimestamp(),
-        source: 'website',
-      }),
-      FIRESTORE_TIMEOUT_MS,
-      'Firestore booking write'
-    );
-
-    await sendBookingEmails(startDate, endDate, userDetails);
-    return true;
-  } catch (error) {
-    console.warn('Firestore write failed; saving booking locally as fallback.', error);
     const result = await createBookingInLocalStorage(startDate, endDate, userDetails);
     await sendBookingEmails(startDate, endDate, userDetails);
     return result;
+  } catch (error) {
+    console.warn('Local booking save failed.', error);
+    throw error;
   }
-
-  return true;
 };
 
 const createBookingInLocalStorage = async (startDate: Date, endDate: Date, userDetails: UserDetails) => {

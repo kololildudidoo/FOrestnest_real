@@ -10,8 +10,6 @@ import Navbar from './Navbar';
 import DateTimeSelection from './DateTimeSelection';
 import { formatDateRange } from '../utils/dateUtils';
 import { BookingPrefill } from '../types';
-import { getDb, isFirebaseEnabled } from '../services/firebase';
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
 
 // --- CONFIGURATION ---
 const HERO_IMAGE_URL = "/images/background.jpg";
@@ -142,38 +140,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onStartBooking, onStartBookin
   useEffect(() => {
     setCurrentReviewIndex(0);
   }, [reviews.length]);
-
-  useEffect(() => {
-    if (!isFirebaseEnabled()) {
-      return;
-    }
-
-    const db = getDb();
-    if (!db) {
-      return;
-    }
-
-    const reviewsQuery = query(collection(db, 'reviews'), orderBy('createdAt', 'desc'));
-    return onSnapshot(reviewsQuery, (snapshot) => {
-      const nextReviews = snapshot.docs
-        .map((doc) => {
-          const data = doc.data() as Partial<Review> & { img?: string; date?: string };
-          const name = data.name?.toString().trim() || 'Guest';
-          const img = data.img?.toString().trim() || `https://i.pravatar.cc/100?u=${encodeURIComponent(name)}`;
-          return {
-            name,
-            date: data.date?.toString().trim() || '',
-            text: data.text?.toString().trim() || '',
-            img,
-          } as Review;
-        })
-        .filter((review) => review.text);
-
-      if (nextReviews.length) {
-        setReviews(nextReviews);
-      }
-    });
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

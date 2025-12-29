@@ -3,8 +3,6 @@ import { createPortal } from 'react-dom';
 import { galleryImages as localGalleryImages } from 'virtual:gallery-images';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import Navbar from './Navbar';
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { getDb, isFirebaseEnabled } from '../services/firebase';
 
 type GalleryImage = {
   src: string;
@@ -82,7 +80,6 @@ interface GalleryPageProps {
 
 const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate, onStartBooking }) => {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const [remoteImages, setRemoteImages] = useState<GalleryImage[]>([]);
 
   const defaultImages: GalleryImage[] = [
     { src: "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?q=80&w=1000", title: "Living Room", subtitle: "" },
@@ -105,7 +102,7 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate, onStartBooking })
     };
   });
 
-  const images = remoteImages.length ? remoteImages : (localImages.length ? localImages : defaultImages);
+  const images = localImages.length ? localImages : defaultImages;
 
   const closeLightbox = () => setActiveIndex(null);
 
@@ -118,37 +115,6 @@ const GalleryPage: React.FC<GalleryPageProps> = ({ onNavigate, onStartBooking })
     if (activeIndex === null) return;
     setActiveIndex((activeIndex + 1) % images.length);
   };
-
-  useEffect(() => {
-    if (!isFirebaseEnabled()) {
-      return;
-    }
-
-    const db = getDb();
-    if (!db) {
-      return;
-    }
-
-    const galleryQuery = query(collection(db, 'gallery'), orderBy('order', 'asc'));
-    return onSnapshot(galleryQuery, (snapshot) => {
-      const nextImages = snapshot.docs
-        .map((doc) => {
-          const data = doc.data() as Partial<GalleryImage>;
-          const src = data.src?.toString().trim();
-          if (!src) return null;
-          return {
-            src,
-            title: data.title?.toString().trim() || 'Gallery image',
-            subtitle: data.subtitle?.toString().trim() || '',
-          } as GalleryImage;
-        })
-        .filter((image): image is GalleryImage => Boolean(image));
-
-      if (nextImages.length) {
-        setRemoteImages(nextImages);
-      }
-    });
-  }, []);
 
   useEffect(() => {
     if (activeIndex === null) {
